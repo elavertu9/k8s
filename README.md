@@ -113,3 +113,84 @@ metadata:
 ```
 
 The `kubernetes.io` and `k8s.io` label namespaces are reserved for Kubernetes, and the `app.kubernetes.io/*` set is the recommended application labeling convention.
+
+## 8) Probes: one of the most important reliability features
+Kubernetes supports startup, readiness, and liveness probes. 
+
+A readiness probe removes a Pod from Service endpoints until it is ready.
+
+A liveness probe restarts a stuck container.
+
+A startup probe protects slow-starting apps by delaying liveness/readiness until startup succeeds.
+
+```yaml
+livenessProbe:
+    httpGet:
+        path: /healthz
+        port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+readinessProbe:
+    httpGet:
+        path: /ready
+        port: 8080
+    periodSeconds: 5
+
+startupProbe:
+    httpGet:
+        path: /startup
+        port: 8080
+    periodSeconds: 5
+    failureThreshold: 24
+```
+
+Use readiness for "can receive traffic".
+
+Use liveness for "must be restarted".
+
+Use startup for "boot isn't done yet".
+
+## 9) Resource requests vs limits (critical for stability)
+Requests tell the scheduler how much CPU/memory a container needs for placement.
+
+Limits are enforced at runtime by the kubelet/kernal. CPU overages are throttled; memory overages can trigger OOM kills.
+
+If you set a limit but no request, Kubernetes may copy the limit into the request.
+
+```yaml
+resources:
+    requests:
+        cpu: "250m"
+        memory: "256Mi"
+    limits:
+        cpu: "500m"
+        memory: "512Mi"
+```
+
+Rule of thumb: set realistic requests, be deliberate with memory limits, and avoid guessing values blindly. The official docs explicitly describe the scheduler/request relationship and the different runtime behavior of CPU throttling vs memory OOM.
+
+[Resource Management for Pods and Containers](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/)
+
+## 10) ConfigMaps vs Secrets
+A ConfigMap stores non-confidential config as key/value data. Pods can consume it via environment variables, command arguments, or mounted files.
+
+A ConfigMap is not secret storage; use a Secret for confidential data.
+
+ConfigMap example
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+    name: app-config
+data:
+    LOG_LEVEL: "info"
+    FEATURE_FLAG_X: "true"
+```
+
+Mount as env:
+```yaml
+envFrom:
+    - configMapRef:
+        name: app-config
+```
