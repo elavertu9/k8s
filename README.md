@@ -5,6 +5,8 @@ The smallest deployable unit is a Pod; in practice, you usually manage Pods thro
 
 A Service gives a stable network endpoint to a changing set of Pods, and Ingress exposes HTTP/HTTPS into the cluster (though Kubernetes now recommends Gateway over Ingress for new work).
 
+![Kubernetes Cluster Architecture](files/images/kubernetes-cluster-architecture.svg)
+
 ## 1) The 15 kubectl commands you'll use every day
 ```bash
 # cluster / context
@@ -177,7 +179,7 @@ A ConfigMap stores non-confidential config as key/value data. Pods can consume i
 
 A ConfigMap is not secret storage; use a Secret for confidential data.
 
-ConfigMap example
+### ConfigMap example
 ```yaml
 apiVersion: v1
 kind: ConfigMap
@@ -194,3 +196,19 @@ envFrom:
     - configMapRef:
         name: app-config
 ```
+
+ConfigMaps decouple environment-specifc configuration from container images, and Pods must reference ConfigMaps in the same namespace.
+
+### Secret example
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+    name: db-secret
+type: Opaque
+stringData:
+    username: appuser
+    password: supersecret
+```
+
+Use Secrets for sensitive material, not ConfigMaps.
