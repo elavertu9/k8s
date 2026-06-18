@@ -324,3 +324,51 @@ volumes:
       persistentVolumeClaim:
         claimName: data
 ```
+
+## 15) DaemonSets, Jobs, and CronJobs
+#### DaemonSet
+Use when a Pod must run on every node (logging agents, monitoring agents, CNI helpers).
+
+```bash
+kubectl get ds -A
+kubectl describe ds <name> -n <ns>
+```
+
+#### Job
+Use for one-off tasks that must run to completion, with retries when needed.
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+    name: migrate-db
+spec:
+    template:
+        spec:
+            restartPolicy: Never
+            containers:
+                - name: migrate
+                  image: my-app:latest
+                  command: ["./migrate.sh"]
+    backoffLimit: 4
+```
+
+#### CronJob
+Use for scheduled tasks like backups or reports. CronJobs create Jobs on a schedule.
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+    name: nightly-backup
+spec:
+    schedule: "0 2 * * *"
+    jobTemplate:
+        spec:
+            template:
+                spec:
+                    restartPolicy: OnFailure
+                    containers:
+                        - name: backup
+                          image: my-backup:latest
+```
