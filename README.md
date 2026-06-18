@@ -212,3 +212,115 @@ stringData:
 ```
 
 Use Secrets for sensitive material, not ConfigMaps.
+
+## 11) Services: what type should I use?
+ClusterIP - internal-only stable service endpoint; default type.
+
+NodePort - exposes a port on every node.
+
+LoadBalancer - asks your cloud provider / implementation for an external load balancer.
+
+Ingress (or preferably Gateway) - application-layer HTTP/HTTPS routing into the cluster.
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+spec:
+  selector:
+    app: api
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: ClusterIP
+```
+
+Services abstract over ephemeral Pod IPs by presenting a stable endpoint for clients.
+
+## 12) Ingress quick reference
+Ingress provides HTTP/HTTPS routing by hostname/path rules, but the API is frozen and the Kubernetes project recommends Gateway for newer designs. Also, creating an Ingress resource alone does nothing unless an Ingress controlelr is installed.
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: web
+spec:
+    rules:
+        - host: app.example.com
+          http:
+            paths:
+                - path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                        name: web
+                        port:
+                            number: 80
+```
+
+## 13) NetworkPolicy: default-open unless you lock it down
+NetworkPolicies let you control traffic at Layer 3/4 (IP/port/protocol) between Pods and between Pods and the outside world, but only if your network plugin supports NetworkPolicy enforcement. By default, Pods are generally non-isolated until a matching policy applies.
+
+Default deny ingress
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+    name: default-deny-ingress
+spec:
+    podSelector: {}
+    policyTypes:
+        - Ingress
+```
+
+Allow traffic from same namespace to Pods labeled app=api
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+    name: allow-api
+spec:
+    podSelector:
+        matchLabels:
+            app: api
+    policyTypes:
+        - Ingress
+    ingress:
+        - from:
+            - podSelector: {}
+```
+Policies are application-centric and use selectors to define allowed traffic.
+
+## 14) Storage: PV, PVC, and StatefulSets
+A PersistentVolume (PV) is cluster storage, provisioned statically or dynamically.
+
+A PersistentVolumeClaim (PVC) is a user request for storage, similar to how a Pod requests compute.
+
+Use StatefulSets when the app needs stable identity and persistent storage; Kubernetes notes that if you do not need stable identifiers or ordered deployment, a Deployment is usually a better fit.
+
+PVC example
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: data
+spec:
+    accessModes:
+        - ReadWriteOnce
+    resources:
+        requests:
+            storage: 10Gi
+```
+
+Mount into a Pod/Deployment
+```yaml
+volumeMounts:
+    - name: data
+      mountPath: /data
+volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: data
+```
